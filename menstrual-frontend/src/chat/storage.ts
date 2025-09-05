@@ -1,5 +1,6 @@
 // src/chat/storage.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 export const CHAT_STORAGE_KEY = "chat_history_v1";
 

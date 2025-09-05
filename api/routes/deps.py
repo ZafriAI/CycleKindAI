@@ -1,6 +1,9 @@
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Depends
 from jose import jwt, JWTError
 import os
+from sqlalchemy.orm import Session
+from db import get_db
+import models
 
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me")
 ALGORITHM = "HS256"
@@ -14,3 +17,9 @@ def get_current_user_id(authorization: str = Header(None)):
         return int(payload["sub"])
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def get_current_user(db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user

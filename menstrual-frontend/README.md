@@ -19,6 +19,9 @@ This guide helps you run the **Expo (React Native)** app on your phone with **Ex
 ```bash
 cd menstrual-frontend
 npm install
+npm install date-fns
+npm install next react react-dom
+
 If Expo asks to install TypeScript types on first run, accept (or run):
 ```
 ```

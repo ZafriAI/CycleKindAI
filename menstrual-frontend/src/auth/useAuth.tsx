@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import * as SecureStore from "expo-secure-store";
+import { getString, saveString, deleteString } from "../storage";
 import { login as apiLogin, register as apiRegister } from "../api";
 import { clearChat } from "../chat/storage";
 
@@ -19,27 +19,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      try { const t = await SecureStore.getItemAsync("auth_token"); if (t) setToken(t); }
-      finally { setLoading(false); }
+      try {
+        const t = await getString("token"); // ← use the same key as your API (see Fix #2)
+        if (t) setToken(t);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
+
+  // LOGIN: use the real field; saving here is okay even if api.login already saved
   const login = async (email: string, password: string) => {
     const res = await apiLogin(email, password);
-    const t = res?.token ?? "demo"; // adjust to your API
-    await SecureStore.setItemAsync("auth_token", t);
+    const t = res.access_token;          // <-- was res?.token ?? "demo"
+    await saveString("token", t);        // optional if you prefer saving only in api.ts
     setToken(t);
   };
 
+  // REGISTER: also persist and set token so you’re authenticated right away
   const register = async (email: string, password: string) => {
-    await apiRegister(email, password);
+    const res = await apiRegister(email, password);
+    const t = res.access_token;          // make sure backend returns this
+    await saveString("token", t);
+    setToken(t);
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync("auth_token");
+    await deleteString("token");     // ← storage helper
     await clearChat();
     setToken(null);
   };
+
 
   return <Ctx.Provider value={{ token, loading, login, register, logout }}>{children}</Ctx.Provider>;
 }

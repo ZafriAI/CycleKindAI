@@ -20,14 +20,22 @@ export default function Login() {
   const doLogin = async () => {
     setError(null); setLoading(true);
     try { await login(email, password); router.replace("/(tabs)"); }
-    catch (e: any) { setError(e?.response?.data?.message || e?.message || "Login failed"); }
+    catch (e: any) {
+      const apiMsg = e?.response?.data?.detail ?? e?.response?.data?.message;
+      setError(apiMsg || e?.message || "Login failed");
+    }
     finally { setLoading(false); }
   };
 
   const doRegister = async () => {
     setError(null); setLoading(true);
     try { await register(email, password); await doLogin(); }
-    catch (e: any) { setError(e?.response?.data?.message || e?.message || "Register failed"); setLoading(false); }
+    // AFTER
+    catch (e: any) {
+      const apiMsg = e?.response?.data?.detail ?? e?.response?.data?.message;
+      setError(apiMsg || e?.message || "Register failed");
+      setLoading(false);
+    }
   };
 
   return (

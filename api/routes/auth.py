@@ -23,5 +23,9 @@ def register(data: schemas.RegisterIn, db: Session = Depends(get_db)):
 def login(data: schemas.LoginIn, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == data.email).first()
     if not user or not verify_password(data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        # Generic, non-enumerating message:
+        raise HTTPException(
+            status_code=401,
+            detail="Couldn't find a matching email or password."
+        )
     return schemas.TokenOut(access_token=create_token(str(user.id)))

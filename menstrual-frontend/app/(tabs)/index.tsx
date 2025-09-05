@@ -1,89 +1,176 @@
-import React, { useEffect, useState } from "react";
-import { SafeAreaView, ScrollView, Text, View, Alert } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { SafeAreaView, ScrollView, Text, View, Pressable } from "react-native";
 import Card from "../../src/ui/components/Card";
-import Button from "../../src/ui/components/Button";
-import Input from "../../src/ui/components/Input";
-import { Colors, Fonts, Space } from "../../src/ui/tokens";
-import Constants from "expo-constants";
-import { addCycle, listCycles, addSymptom, listSymptoms, getInsights} from "../../src/api";
+import {
+  listCycles, listSymptoms, getInsights,
+  addCycle, updateCycle, deleteCycle,
+  addSymptom, updateSymptom, deleteSymptom
+} from "../../src/api";
+import CycleCalendar from "../../components/CycleCalendar";
+import CycleFormModal from "../../components/modals/CycleFormModal";
+import SymptomFormModal from "../../components/modals/SymptomFormModal";
+import { useAuth } from "../../src/auth/useAuth";
 
 export default function Home() {
-  const base = Constants.expoConfig?.extra?.apiBaseUrl || "(missing)";
-  // const [status, setStatus] = useState("checking...");
-  // const [email, setEmail] = useState("demo@example.com");
-  // const [password, setPassword] = useState("Passw0rd!");
+  const { token, loading } = useAuth();
+
+  // Declare hooks unconditionally at the top
   const [cycles, setCycles] = useState<any[]>([]);
   const [symptoms, setSymptoms] = useState<any[]>([]);
-  const [insights, setInsights] = useState<any>(null);
-  // const [prompt, setPrompt] = useState("Give me a gentle self-care tip for PMS");
-  // const [chatAns, setChatAns] = useState("");
+  const [insights, setInsights] = useState<any | null>(null);
 
-  // const ping = async () => {
-  //   try { const r = await fetch(`${base}/health`); setStatus(`OK ${await r.text()}`); }
-  //   catch (e: any) { setStatus(`FAIL ${e?.message}`); }
-  // };
+  const [cycleModalOpen, setCycleModalOpen] = useState(false);
+  const [symptomModalOpen, setSymptomModalOpen] = useState(false);
+  const [editingCycle, setEditingCycle] = useState<any | undefined>();
+  const [editingSymptom, setEditingSymptom] = useState<any | undefined>();
 
-  const load = async () => {
-    try {
-      const [c, s, i] = await Promise.all([listCycles(), listSymptoms(), getInsights()]);
-      setCycles(c); setSymptoms(s); setInsights(i);
-    } catch (e: any) {
-      console.log("LOAD ERROR", e?.response?.data || e.message);
+  const reload = useCallback(async () => {
+    const [c, s, i] = await Promise.all([listCycles(), listSymptoms(), getInsights()]);
+    setCycles(c); setSymptoms(s); setInsights(i);
+  }, []);
+
+  // Only run when auth is ready and we have a token
+  useEffect(() => {
+    if (!loading && token) {
+      reload().catch(console.error);
     }
-  };
-  
+  }, [loading, token, reload]);
 
-  useEffect(() => { load(); }, []);
+  if (loading) return null; // or a splash component
+
+  // Open modals (prefilled)
+  const requestAddCycle = (startISO: string) => {
+    setEditingCycle({ start_date: startISO, end_date: null, flow_intensity: null, notes: "" });
+    setCycleModalOpen(true);
+  };
+  const requestAddSymptom = (dateISO: string) => {
+    setEditingSymptom({ date: dateISO, symptom: "", severity: null, tags: null, notes: "" });
+    setSymptomModalOpen(true);
+  };
+
+  // Saves
+  const saveCycle = async (body: any) => {
+    if (body.id) {
+      await updateCycle(body.id, {
+        start_date: body.start_date,
+        end_date: body.end_date ?? null,
+        flow_intensity: body.flow_intensity ?? null,
+        notes: body.notes ?? null,
+      });
+    } else {
+      await addCycle({
+        start_date: body.start_date,
+        end_date: body.end_date ?? null,
+        flow_intensity: body.flow_intensity ?? null,
+        notes: body.notes ?? null,
+      });
+    }
+    setCycleModalOpen(false);
+    await reload();
+  };
+
+  const saveSymptom = async (body: any) => {
+    if (body.id) {
+      await updateSymptom(body.id, {
+        date: body.date,
+        symptom: body.symptom,
+        severity: body.severity ?? null,
+        tags: body.tags ?? null,
+        notes: body.notes ?? null,
+      });
+    } else {
+      await addSymptom({
+        date: body.date,
+        symptom: body.symptom,
+        severity: body.severity ?? null,
+        tags: body.tags ?? null,
+        notes: body.notes ?? null,
+      });
+    }
+    setSymptomModalOpen(false);
+    await reload();
+  };
+
+  // Deletes
+  const removeCycle = async (id: number) => {
+    await deleteCycle(id);
+    setCycleModalOpen(false);
+    await reload();
+  };
+  const removeSymptom = async (id: number) => {
+    await deleteSymptom(id);
+    setSymptomModalOpen(false);
+    await reload();
+  };
 
   return (
-    <SafeAreaView style={{ flex:1, backgroundColor: Colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: Space.md }}>
-        <Text style={{ fontSize: Fonts.title, fontWeight:"700", marginBottom: Space.sm }}>Home</Text>
-        {/* <Card style={{ marginBottom: Space.md }}>
-          <Text selectable>apiBaseUrl: {base}</Text>
-        </Card> */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: "700" }}>Home</Text>
 
-        {/* <Text style={{ marginTop:12 }}>Email</Text>
-        <Input value={email} onChangeText={setEmail} autoCapitalize="none"
-          style={{ borderWidth:1, padding:8, borderRadius:8 }} />
+        <CycleCalendar
+          cycles={cycles}
+          symptoms={symptoms}
+          onRequestAddCycle={requestAddCycle}
+          onRequestAddSymptom={requestAddSymptom}
+        />
 
-        <Text style={{ marginTop:12 }}>Password</Text>
-        <Input value={password} onChangeText={setPassword} secureTextEntry
-          style={{ borderWidth:1, padding:8, borderRadius:8 }} /> */}
+        {/* Cycles Card */}
+        <Card>
+          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>Cycles</Text>
+          <View style={{ gap: 8 }}>
+            {cycles.map((c) => (
+              <Pressable key={c.id} onPress={() => { setEditingCycle(c); setCycleModalOpen(true); }}>
+                <View style={{ padding: 10, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10 }}>
+                  <Text>
+                    {c.start_date} → {c.end_date ?? "(open)"}  • flow:{c.flow_intensity ?? "-"}
+                  </Text>
+                  {!!c.notes && <Text style={{ color: "#6b7280" }}>{c.notes}</Text>}
+                </View>
+              </Pressable>
+            ))}
+            {cycles.length === 0 && <Text style={{ color: "#6b7280" }}>No cycles yet.</Text>}
+          </View>
+        </Card>
 
-        
+        {/* Symptoms Card */}
+        <Card>
+          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>Symptoms</Text>
+          <View style={{ gap: 8 }}>
+            {symptoms.map((s) => (
+              <Pressable key={s.id} onPress={() => { setEditingSymptom(s); setSymptomModalOpen(true); }}>
+                <View style={{ padding: 10, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10 }}>
+                  <Text>{s.date} • {s.symptom}{s.severity ? `:${s.severity}` : ""}</Text>
+                  {!!s.notes && <Text style={{ color: "#6b7280" }}>{s.notes}</Text>}
+                </View>
+              </Pressable>
+            ))}
+            {symptoms.length === 0 && <Text style={{ color: "#6b7280" }}>No symptoms yet.</Text>}
+          </View>
+        </Card>
 
-        <View style={{ height:12 }} />
-        <Button title="Add Period (today)" onPress={async () => {
-          const today = new Date().toISOString().slice(0,10);
-          await addCycle(today, 3, "app demo");
-          await load();
-        }} />
-
-        <View style={{ height:8 }} />
-        <Button title="Add Symptom (tomorrow: cramps 2)" onPress={async () => {
-          const d = new Date(Date.now()+24*3600*1000).toISOString().slice(0,10);
-          await addSymptom(d, "cramps", 2, { mood:"low" }, "demo");
-          await load();
-        }} />
-
-        <Card style={{ marginBottom: Space.md }}>
-          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Insights</Text>
+        {/* Insights */}
+        <Card>
+          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>Insights</Text>
           <Text selectable>{JSON.stringify(insights, null, 2)}</Text>
         </Card>
-
-        <Card style={{ marginBottom: Space.md }}>
-          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Cycles</Text>
-          <Text selectable>{JSON.stringify(cycles, null, 2)}</Text>
-        </Card>
-
-        <Card style={{ marginBottom: Space.md }}>
-          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Symptoms</Text>
-          <Text selectable>{JSON.stringify(symptoms, null, 2)}</Text>
-        </Card>
-
-        {/* <Text style={{ marginTop:8 }} selectable>{chatAns}</Text> */}
       </ScrollView>
+
+      {/* Modals */}
+      <CycleFormModal
+        visible={cycleModalOpen}
+        initial={editingCycle}
+        onClose={() => setCycleModalOpen(false)}
+        onSave={saveCycle}
+        onDelete={editingCycle?.id ? removeCycle : undefined}
+      />
+      <SymptomFormModal
+        visible={symptomModalOpen}
+        initial={editingSymptom}
+        onClose={() => setSymptomModalOpen(false)}
+        onSave={saveSymptom}
+        onDelete={editingSymptom?.id ? removeSymptom : undefined}
+      />
     </SafeAreaView>
   );
 }
