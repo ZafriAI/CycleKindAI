@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Literal
 from datetime import date
 
 class TokenOut(BaseModel):
@@ -42,9 +42,16 @@ class InsightOut(BaseModel):
     avg_cycle_length_days: Optional[float] = None
     notes: Optional[str] = None
 
-class ChatIn(BaseModel):
-    prompt: str
+class ChatMsg(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
 
+class ChatIn(BaseModel):
+    prompt: Optional[str] = None
+    # NEW:
+    messages: Optional[List[ChatMsg]] = None
+    threadId: Optional[str] = None  # optional: carry a thread id if you want
+    
 class IngestDoc(BaseModel):
     title: str
     url: str

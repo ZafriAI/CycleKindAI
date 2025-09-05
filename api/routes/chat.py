@@ -6,7 +6,7 @@ import models
 from routes.deps import get_current_user_id  # adjust if named differently
 from user_context import summarize_user
 import schemas
-from .rag import ollama_chat
+from .rag import ollama_chat, ollama_chat_messages  # add the new import
 
 router = APIRouter()
 
@@ -36,24 +36,29 @@ async def chat(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    # 1) Build compact user context
-    user_ctx = summarize_user(db, user_id)
+    # compact user personalization you already compute
+    user_ctx = summarize_user(db, user_id)  # existing helper
 
-    # 2) System instructions (kept separate)
     system = (
         "You are a supportive menstrual health assistant. "
         "Use USER CONTEXT for personalization. Do not provide diagnosis; "
         "offer gentle, practical tips."
     )
 
-    # 3) User message = context + the actual prompt
+    # --- NEW: multi-turn path ---
+    if body.messages:
+        msgs = [{"role": "system", "content": system},
+                {"role": "system", "content": user_ctx}]
+        # append client-provided messages as-is
+        msgs += [m.dict() for m in body.messages]
+        answer = await ollama_chat_messages(msgs)
+        return {"answer": answer, "threadId": body.threadId}
+
+    # --- OLD: single-turn fallback (unchanged) ---
     user_msg = f"""{user_ctx}
 
 USER PROMPT:
 {body.prompt}
 """
-
-    # 4) Call Ollama with the proper arguments
     answer = await ollama_chat(system, user_msg)
-
     return {"answer": answer}

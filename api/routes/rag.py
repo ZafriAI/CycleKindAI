@@ -59,6 +59,17 @@ async def ollama_chat(system: str, user: str) -> str:
             return data["message"].get("content","").strip()
         return data.get("response","").strip()
 
+async def ollama_chat_messages(messages: list[dict]) -> str:
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json={"model": CHAT_MODEL, "messages": messages, "stream": False},
+        )
+        r.raise_for_status()
+        data = r.json()
+        msg = data.get("message", {}).get("content", "") or data.get("response", "")
+        return (msg or "").strip()
+
 def ensure_vector_index(session, dim: int):
     session.run("""
         CREATE VECTOR INDEX guideline_embed_idx IF NOT EXISTS

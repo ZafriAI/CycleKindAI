@@ -66,3 +66,10 @@ export async function chat(prompt: string) {
   const { data } = await instance.post("/chat", { prompt });
   return data;
 }
+
+export type ChatMsg = { role: "user" | "assistant" | "system"; content: string };
+
+export async function chatWithHistory(messages: ChatMsg[], threadId?: string) {
+  const { data } = await instance.post("/chat", { messages, threadId });
+  return data as { answer: string; threadId?: string };
+}

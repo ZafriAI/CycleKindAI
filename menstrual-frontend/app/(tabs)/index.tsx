@@ -1,75 +1,89 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { SafeAreaView, ScrollView, Text, View, Alert } from "react-native";
+import Card from "../../src/ui/components/Card";
+import Button from "../../src/ui/components/Button";
+import Input from "../../src/ui/components/Input";
+import { Colors, Fonts, Space } from "../../src/ui/tokens";
+import Constants from "expo-constants";
+import { addCycle, listCycles, addSymptom, listSymptoms, getInsights} from "../../src/api";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function Home() {
+  const base = Constants.expoConfig?.extra?.apiBaseUrl || "(missing)";
+  // const [status, setStatus] = useState("checking...");
+  // const [email, setEmail] = useState("demo@example.com");
+  // const [password, setPassword] = useState("Passw0rd!");
+  const [cycles, setCycles] = useState<any[]>([]);
+  const [symptoms, setSymptoms] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any>(null);
+  // const [prompt, setPrompt] = useState("Give me a gentle self-care tip for PMS");
+  // const [chatAns, setChatAns] = useState("");
 
-export default function HomeScreen() {
+  // const ping = async () => {
+  //   try { const r = await fetch(`${base}/health`); setStatus(`OK ${await r.text()}`); }
+  //   catch (e: any) { setStatus(`FAIL ${e?.message}`); }
+  // };
+
+  const load = async () => {
+    try {
+      const [c, s, i] = await Promise.all([listCycles(), listSymptoms(), getInsights()]);
+      setCycles(c); setSymptoms(s); setInsights(i);
+    } catch (e: any) {
+      console.log("LOAD ERROR", e?.response?.data || e.message);
+    }
+  };
+  
+
+  useEffect(() => { load(); }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={{ flex:1, backgroundColor: Colors.bg }}>
+      <ScrollView contentContainerStyle={{ padding: Space.md }}>
+        <Text style={{ fontSize: Fonts.title, fontWeight:"700", marginBottom: Space.sm }}>Home</Text>
+        {/* <Card style={{ marginBottom: Space.md }}>
+          <Text selectable>apiBaseUrl: {base}</Text>
+        </Card> */}
+
+        {/* <Text style={{ marginTop:12 }}>Email</Text>
+        <Input value={email} onChangeText={setEmail} autoCapitalize="none"
+          style={{ borderWidth:1, padding:8, borderRadius:8 }} />
+
+        <Text style={{ marginTop:12 }}>Password</Text>
+        <Input value={password} onChangeText={setPassword} secureTextEntry
+          style={{ borderWidth:1, padding:8, borderRadius:8 }} /> */}
+
+        
+
+        <View style={{ height:12 }} />
+        <Button title="Add Period (today)" onPress={async () => {
+          const today = new Date().toISOString().slice(0,10);
+          await addCycle(today, 3, "app demo");
+          await load();
+        }} />
+
+        <View style={{ height:8 }} />
+        <Button title="Add Symptom (tomorrow: cramps 2)" onPress={async () => {
+          const d = new Date(Date.now()+24*3600*1000).toISOString().slice(0,10);
+          await addSymptom(d, "cramps", 2, { mood:"low" }, "demo");
+          await load();
+        }} />
+
+        <Card style={{ marginBottom: Space.md }}>
+          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Insights</Text>
+          <Text selectable>{JSON.stringify(insights, null, 2)}</Text>
+        </Card>
+
+        <Card style={{ marginBottom: Space.md }}>
+          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Cycles</Text>
+          <Text selectable>{JSON.stringify(cycles, null, 2)}</Text>
+        </Card>
+
+        <Card style={{ marginBottom: Space.md }}>
+          <Text style={{ fontSize: 18, fontWeight:"600", marginBottom: 6 }}>Symptoms</Text>
+          <Text selectable>{JSON.stringify(symptoms, null, 2)}</Text>
+        </Card>
+
+        {/* <Text style={{ marginTop:8 }} selectable>{chatAns}</Text> */}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
