@@ -56,19 +56,27 @@ export async function listCycles() {
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
+// AFTER (end_date is required; parse server error 'detail')
 export async function addCycle(body: {
-  start_date: string; end_date?: string | null; flow_intensity?: number | null; notes?: string | null;
+  start_date: string;
+  end_date: string;                   // <-- required now
+  flow_intensity?: number | null;
+  notes?: string | null;
 }) {
   const r = await fetch(`${BASE}/cycles/`, {
     method: "POST",
     headers: await authHeaders(),
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = data?.detail || data?.message || JSON.stringify(data) || "Failed to create cycle";
+    throw new Error(msg);
+  }
+  return data;
 }
 export async function updateCycle(id: number, body: Partial<{
-  start_date: string; end_date: string | null; flow_intensity: number | null; notes: string | null;
+  start_date: string; end_date: string; flow_intensity: number | null; notes: string | null;
 }>) {
   const r = await fetch(`${BASE}/cycles/${id}`, {
     method: "PATCH",

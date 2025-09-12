@@ -1,19 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { Modal, View, Text, TextInput, TouchableOpacity } from "react-native";
 
-type Cycle = { id?: number; start_date: string; end_date?: string | null; flow_intensity?: number | null; notes?: string | null; };
+type Cycle = {
+  id?: number;
+  start_date: string;
+  end_date?: string | null;
+  flow_intensity?: number | null;
+  notes?: string | null;
+};
 
 export default function CycleFormModal({
-  visible, onClose, initial, onSave, onDelete,
+  visible,
+  onClose,
+  initial,
+  onSave,
+  onDelete,
+  errorMessage,
+  onClearError,
 }: {
   visible: boolean;
   onClose: () => void;
   initial?: Cycle;
   onSave: (body: Cycle) => Promise<void> | void;
   onDelete?: (id: number) => Promise<void> | void;
+  errorMessage?: string | null;
+  onClearError?: () => void;
 }) {
-  const [form, setForm] = useState<Cycle>({ start_date: "", end_date: null, flow_intensity: null, notes: "" });
+  const [form, setForm] = useState<Cycle>({
+    start_date: "",
+    end_date: null,
+    flow_intensity: null,
+    notes: "",
+  });
 
+  // Load/refresh initial state when opening or when the record changes
   useEffect(() => {
     setForm({
       id: initial?.id,
@@ -24,43 +44,105 @@ export default function CycleFormModal({
     });
   }, [initial, visible]);
 
+  // If user picks a start date but end is missing, default to same day (single-day cycle)
+  useEffect(() => {
+    if (form.start_date && !form.end_date) {
+      setForm((f) => ({ ...f, end_date: f.start_date }));
+    }
+  }, [form.start_date, form.end_date]);
+
   const set = (k: keyof Cycle, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Validation
+  const endMissing = !form.end_date || form.end_date.trim() === "";
+  const badRange =
+    !!form.start_date &&
+    !!form.end_date &&
+    form.end_date.trim() !== "" &&
+    form.end_date < form.start_date;
+
+  const canSave = !!form.start_date && !endMissing && !badRange;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex:1, backgroundColor:"rgba(0,0,0,0.4)", justifyContent:"flex-end" }}>
-        <View style={{ backgroundColor:"#fff", padding:16, borderTopLeftRadius:16, borderTopRightRadius:16 }}>
-          <Text style={{ fontSize:18, fontWeight:"700", marginBottom:8 }}>{form.id ? "Edit cycle" : "New cycle"}</Text>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+        <View style={{ backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>
+            {form.id ? "Edit cycle" : "New cycle"}
+          </Text>
 
           <Text>Start date (YYYY-MM-DD)</Text>
-          <TextInput value={form.start_date} onChangeText={(t)=>set("start_date", t)} placeholder="2025-11-19"
-            style={{ borderWidth:1, borderColor:"#e5e7eb", borderRadius:8, padding:8, marginBottom:8 }} />
+          <TextInput
+            value={form.start_date}
+            onChangeText={(t) => {
+              onClearError?.();
+              set("start_date", t);
+            }}
+            placeholder="2025-11-19"
+            style={{ borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, padding: 8, marginBottom: 8 }}
+          />
 
-          <Text>End date (YYYY-MM-DD or blank)</Text>
-          <TextInput value={form.end_date ?? ""} onChangeText={(t)=>set("end_date", t || null)} placeholder=""
-            style={{ borderWidth:1, borderColor:"#e5e7eb", borderRadius:8, padding:8, marginBottom:8 }} />
+          <Text>End date (YYYY-MM-DD)</Text>
+          <TextInput
+            value={form.end_date ?? ""}
+            onChangeText={(t) => {
+              onClearError?.();
+              set("end_date", t || null);
+            }}
+            placeholder=""
+            style={{ borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, padding: 8, marginBottom: 4 }}
+          />
+          {endMissing && (
+            <Text style={{ color: "#DC2626", marginBottom: 4 }}>End date is required.</Text>
+          )}
+          {badRange && (
+            <Text style={{ color: "#DC2626", marginBottom: 4 }}>
+              End date must be on or after start date.
+            </Text>
+          )}
+          {errorMessage ? (
+            <Text style={{ color: "#DC2626", marginBottom: 4 }}>{errorMessage}</Text>
+          ) : null}
 
           <Text>Flow intensity (1–5)</Text>
-          <TextInput value={form.flow_intensity?.toString() ?? ""} keyboardType="number-pad"
-            onChangeText={(t)=>set("flow_intensity", t ? parseInt(t,10) : null)}
-            style={{ borderWidth:1, borderColor:"#e5e7eb", borderRadius:8, padding:8, marginBottom:8 }} />
+          <TextInput
+            value={form.flow_intensity?.toString() ?? ""}
+            keyboardType="number-pad"
+            onChangeText={(t) => set("flow_intensity", t ? parseInt(t, 10) : null)}
+            style={{ borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, padding: 8, marginBottom: 8 }}
+          />
 
           <Text>Notes</Text>
-          <TextInput value={form.notes ?? ""} onChangeText={(t)=>set("notes", t)} placeholder="added from calendar"
-            style={{ borderWidth:1, borderColor:"#e5e7eb", borderRadius:8, padding:8, marginBottom:16 }} />
+          <TextInput
+            value={form.notes ?? ""}
+            onChangeText={(t) => set("notes", t)}
+            placeholder="added from calendar"
+            style={{ borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, padding: 8, marginBottom: 16 }}
+          />
 
-          <View style={{ flexDirection:"row", justifyContent:"space-between", gap:8 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
             {form.id && onDelete && (
-              <TouchableOpacity onPress={()=>onDelete!(form.id!)} style={{ padding:12, backgroundColor:"#fee2e2", borderRadius:10 }}>
-                <Text style={{ color:"#b91c1c", fontWeight:"600" }}>Delete</Text>
+              <TouchableOpacity
+                onPress={() => onDelete!(form.id!)}
+                style={{ padding: 12, backgroundColor: "#fee2e2", borderRadius: 10 }}
+              >
+                <Text style={{ color: "#b91c1c", fontWeight: "600" }}>Delete</Text>
               </TouchableOpacity>
             )}
-            <View style={{ flex:1 }} />
-            <TouchableOpacity onPress={onClose} style={{ padding:12 }}>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={onClose} style={{ padding: 12 }}>
               <Text>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={()=>onSave(form)} style={{ padding:12, backgroundColor:"#111827", borderRadius:10 }}>
-              <Text style={{ color:"#fff", fontWeight:"600" }}>Save</Text>
+            <TouchableOpacity
+              disabled={!canSave}
+              onPress={() => canSave && onSave({ ...form, end_date: form.end_date! })}
+              style={{
+                padding: 12,
+                backgroundColor: canSave ? "#111827" : "#9CA3AF",
+                borderRadius: 10,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>Save</Text>
             </TouchableOpacity>
           </View>
         </View>
