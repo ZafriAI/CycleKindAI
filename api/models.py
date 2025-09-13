@@ -17,9 +17,9 @@ class User(Base):
 class CycleLog(Base):
     __tablename__ = "cycle_logs"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=False)
     flow_intensity = Column(Integer, nullable=True)
     notes = Column(String, nullable=True)
 
@@ -28,7 +28,7 @@ class CycleLog(Base):
 class SymptomLog(Base):
     __tablename__ = "symptom_logs"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    user_id = Column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     date = Column(Date, nullable=False)
     symptom = Column(String, nullable=False)
     severity = Column(Integer, nullable=True)

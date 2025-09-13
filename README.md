@@ -4,6 +4,8 @@ Spin up **FastAPI** (auth/cycles/symptoms/insights/chat + RAG), **Neo4j 5** (gra
 
 ## Quick start
 ```bash
+ollama pull qwen2.5:1.5b-instruct 
+ollama pull nomic-embed-text:latest
 docker compose up -d
 pip install uvicorn
 # first run may take a few minutes while models download

@@ -14,15 +14,12 @@ import os
 import schemas
 
 router = APIRouter()
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:1.5b-instruct")
-
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password123")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:14b-instruct")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen2.5:1.5b-instruct")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text:latest")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
@@ -115,14 +112,20 @@ async def ask(inp: schemas.AskIn, db: Session = Depends(get_db), user_id: int = 
         context += f"[{i}] {h['title']} — {h['url']} :: {snippet}\n"
 
     # 4) add **user-aware** summary
-    summary = summarize_user(db, user_id)
-
+    summary = summarize_user(db, user_id, question=inp.question)
+    print("DEBUG USER CTX:\n", summary)
     # 5) system/user messages
     system = (
         "You are a supportive menstrual health assistant. "
         "Use ONLY the provided context and cite sources by [number]. "
         "Personalize with USER CONTEXT when relevant. "
         "Do NOT provide medical advice; include a short disclaimer that this is educational info."
+        "Use USER CONTEXT and QUESTION-SPECIFIC EVIDENCE as the sole source of truth. "
+        "When answering about periods, copy the cycle ranges exactly as shown under 'Cycles in window'. Do not infer end dates from symptoms."
+        "If evidence lists cycles with start and end dates, repeat them exactly. "
+        "If there is no evidence for the requested window, say so clearly. "
+        "Do not guess or generalize. "
+        "Do not provide diagnosis; offer only gentle, practical info."
     )
     user = (
         f"{summary}\n\n"

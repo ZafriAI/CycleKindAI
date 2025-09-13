@@ -8,11 +8,13 @@ import routes.insights as insights
 import routes.phases as phases
 import routes.rag as rag
 import routes.chat as chat
+import routes.me as me 
+
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Menstrual App API", version="0.2.0")
-
+app.include_router(me.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
