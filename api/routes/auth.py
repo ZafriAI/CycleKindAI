@@ -11,21 +11,18 @@ ALLOW_REG = os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
 @router.post("/register", response_model=schemas.TokenOut)
 def register(data: schemas.RegisterIn, db: Session = Depends(get_db)):
     if not ALLOW_REG:
-        raise HTTPException(status_code=403, detail="Registration disabled")
+        raise HTTPException(403, "Registration disabled")
     existing = db.query(models.User).filter(models.User.email == data.email).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Email already registered")
+        raise HTTPException(409, "Email already registered")
     user = models.User(email=data.email, password_hash=hash_password(data.password))
     db.add(user); db.commit(); db.refresh(user)
-    return schemas.TokenOut(access_token=create_token(str(user.id)))
+    return schemas.TokenOut(access_token=create_token(user.id, getattr(user, "token_version", 0)))
 
 @router.post("/login", response_model=schemas.TokenOut)
 def login(data: schemas.LoginIn, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == data.email).first()
     if not user or not verify_password(data.password, user.password_hash):
-        # Generic, non-enumerating message:
-        raise HTTPException(
-            status_code=401,
-            detail="Couldn't find a matching email or password."
-        )
-    return schemas.TokenOut(access_token=create_token(str(user.id)))
+        raise HTTPException(401, "Couldn't find a matching email or password.")
+    return schemas.TokenOut(access_token=create_token(user.id, getattr(user, "token_version", 0)))
+

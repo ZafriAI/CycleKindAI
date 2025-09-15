@@ -161,3 +161,37 @@ export async function register(email: string, password: string) {
   if (!r.ok) throw new Error(data?.detail || data?.message || "Register failed");
   return data; // must include { access_token, ... }
 }
+
+// account
+export async function changePassword(current_password: string, new_password: string) {
+  const r = await fetch(`${BASE}/me/password`, {
+    method: "PATCH",
+    headers: await authHeaders(),
+    body: JSON.stringify({ current_password, new_password }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.detail || "Failed to change password");
+  return data;
+}
+
+export async function exportMyData() {
+  const r = await fetch(`${BASE}/me/export`, { headers: await authHeaders() });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.detail || "Failed to export data");
+  return data;
+}
+
+export async function deleteAccount() {
+  const r = await fetch(`${BASE}/me`, { method: "DELETE", headers: await authHeaders() });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.detail || "Failed to delete account");
+  return data;
+}
+
+export async function eraseMyData() {
+  const r = await fetch(`${BASE}/me/data`, { method: "DELETE", headers: await authHeaders() });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.detail || "Failed to erase data");
+  return data;
+}
+

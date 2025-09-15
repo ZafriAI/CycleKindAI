@@ -13,6 +13,10 @@ def hash_password(pw: str):
 def verify_password(pw: str, pw_hash: str):
     return pwd_context.verify(pw, pw_hash)
 
-def create_token(sub: str, expires_minutes: int = 60*24*30):
+def create_token(user_id: int, token_version: int = 0, expires_minutes: int = 60*24*30) -> str:
     exp = datetime.utcnow() + timedelta(minutes=expires_minutes)
-    return jwt.encode({"sub": sub, "exp": exp}, JWT_SECRET, algorithm=ALGORITHM)
+    payload = {"sub": str(user_id), "tv": int(token_version), "exp": exp}
+    return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
+
+def decode_token(token: str) -> dict:
+    return jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])

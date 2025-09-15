@@ -9,6 +9,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    token_version = Column(Integer, nullable=False, server_default="0", default=0)
     allow_research = Column(Boolean, default=False)
 
     cycles = relationship("CycleLog", back_populates="user", cascade="all, delete-orphan")
