@@ -1,6 +1,6 @@
 ---
 # CycleKindAI
-AI menstrual health support — co-created with women.
+### AI menstrual health support — co-created with women.
 ---
 ## What is CycleKindAI?
 CycleKindAI is a privacy-first menstrual cycle app that combines **cycle tracking**, **symptom journaling**, and an **AI assistant** that answers questions with citations from trusted, non-emergency resources you choose. It’s built with a **feminist, user-first** ethos and designed in collaboration with women mentors and contributors.
